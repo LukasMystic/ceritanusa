@@ -1,34 +1,18 @@
-import os
-import pickle
-import requests
 from transformers import BertTokenizer, EncoderDecoderModel
 
-# Set BASE_DIR to current file's directory
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+def load_model_and_tokenizer():
+    # Either download directly from HF hub, or
+    # load from local directory where you saved previously
+    tokenizer = BertTokenizer.from_pretrained("cahya/bert2bert-indonesian-summarization")
+    model = EncoderDecoderModel.from_pretrained("cahya/bert2bert-indonesian-summarization")
+    return tokenizer, model
 
-# URL of the raw pickle file on Hugging Face repo
-PICKLE_URL = "https://huggingface.co/LukasMystic/indonesian-summarizer/resolve/main/indonesian_summarization.pkl"
-
-# Local model path
-MODEL_PATH = os.path.join(BASE_DIR, "indonesian_summarization.pkl")
-
-# Download the pickle file if it doesn't exist locally
-if not os.path.exists(MODEL_PATH):
-    print("Downloading model...")
-    response = requests.get(PICKLE_URL)
-    response.raise_for_status()
-    with open(MODEL_PATH, "wb") as f:
-        f.write(response.content)
-    print("Download complete.")
-
-# Load the model and tokenizer from pickle
-with open(MODEL_PATH, "rb") as f:
-    loaded_tokenizer, loaded_model = pickle.load(f)
+tokenizer, model = load_model_and_tokenizer()
 
 def summarize_text(text):
-    input_ids = loaded_tokenizer.encode(text, return_tensors='pt')
+    input_ids = tokenizer.encode(text, return_tensors='pt')
 
-    summary_ids = loaded_model.generate(
+    summary_ids = model.generate(
         input_ids,
         min_length=30,
         max_length=80,
@@ -39,5 +23,5 @@ def summarize_text(text):
         no_repeat_ngram_size=2
     )
 
-    summary = loaded_tokenizer.decode(summary_ids[0], skip_special_tokens=True)
+    summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
     return summary
