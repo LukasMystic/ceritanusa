@@ -2,6 +2,7 @@ from django.urls import path
 from .views import ArtikelListCreateView, ArtikelDetailView, ChatMessageList, ChatMessageDetail, QuizDetailView, QuizListCreateView,  FavoriteListCreateView, FavoriteDeleteView, FavoriteListByUserView, SummaryListCreateView, SummaryDetailView, ArtikelImageView, ChatOverviewView
 
 urlpatterns = [
+    path('', lambda request: HttpResponse("OK"), name='health-check'),
     path('artikels/', ArtikelListCreateView.as_view(), name='artikel-list'),
     path('artikels/<str:pk>/', ArtikelDetailView.as_view(), name='artikel-detail'),
     path('artikels/<str:pk>/image/', ArtikelImageView.as_view(), name='artikel-image'),
