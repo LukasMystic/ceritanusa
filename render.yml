@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: my-django-websocket
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: daphne backend.asgi:application --port $PORT --bind 0.0.0.0
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: backend.settings
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
