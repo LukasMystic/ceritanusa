@@ -14,9 +14,16 @@ from pathlib import Path
 from mongoengine import connect
 
 # Connect to MongoDB
-MONGO_DB_NAME = "admin123"
-MONGO_URI = "mongodb+srv://admin:admin123@ceritanusa.vqj7q.mongodb.net/"
-MONGOENGINE_AUTOINDEX = False
+MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "admin123")
+MONGO_URI = os.getenv("MONGO_URI", "mongodb+srv://admin:admin123@ceritanusa.vqj7q.mongodb.net/")
+
+# Connect to MongoDB using environment variables
+connect(
+    db=MONGO_DB_NAME,
+    host=MONGO_URI,
+    alias="default",
+    # other options if needed
+)
 
 
 connect(db=MONGO_DB_NAME, host=MONGO_URI)
