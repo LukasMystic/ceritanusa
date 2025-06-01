@@ -1,27 +1,29 @@
-from transformers import BertTokenizer, EncoderDecoderModel
+import requests
+import os
+
+HF_TOKEN = os.getenv("HF_TOKEN")
+
+API_URL = "https://router.huggingface.co/hf-inference/models/cahya/t5-base-indonesian-summarization-cased"
+HEADERS = {
+    "Authorization": "Bearer {HF_TOKEN}"  
+}
 
 def load_model_and_tokenizer():
-    # Either download directly from HF hub, or
-    # load from local directory where you saved previously
-    tokenizer = BertTokenizer.from_pretrained("cahya/bert2bert-indonesian-summarization")
-    model = EncoderDecoderModel.from_pretrained("cahya/bert2bert-indonesian-summarization")
-    return tokenizer, model
+    return None, None
 
 tokenizer, model = load_model_and_tokenizer()
 
 def summarize_text(text):
-    input_ids = tokenizer.encode(text, return_tensors='pt')
+    payload = {"inputs": f"ringkasan: {text}"}
+    response = requests.post(API_URL, headers=HEADERS, json=payload)
 
-    summary_ids = model.generate(
-        input_ids,
-        min_length=30,
-        max_length=80,
-        num_beams=5,
-        repetition_penalty=2.5,
-        length_penalty=1.0,
-        early_stopping=True,
-        no_repeat_ngram_size=2
-    )
+    if response.status_code == 200:
+        json_response = response.json()
+        try:
+            return json_response[0]["summary_text"]  # <-- changed here
+        except (KeyError, IndexError, TypeError):
+            return "⚠️ Respons tidak terduga dari model."
+    else:
+        return f"⚠️ API Error {response.status_code}: {response.text}"
 
-    summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
-    return summary
+
