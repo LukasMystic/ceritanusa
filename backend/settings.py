@@ -12,19 +12,14 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from mongoengine import connect
-import os
 
 # Connect to MongoDB
-MONGO_DB_NAME = os.getenv("MONGO_DB_NAME")
-MONGO_URI = os.getenv("MONGO_URI")
+MONGO_DB_NAME = "admin123"
+MONGO_URI = "mongodb+srv://admin:admin123@ceritanusa.vqj7q.mongodb.net/"
+MONGOENGINE_AUTOINDEX = False
 
-print("MONGO_URI =", os.getenv("MONGO_URI"))
-print("MONGO_DB_NAME =", os.getenv("MONGO_DB_NAME"))
 
-connect(
-    db=MONGO_DB_NAME,
-    host=MONGO_URI,
-)
+connect(db=MONGO_DB_NAME, host=MONGO_URI)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
