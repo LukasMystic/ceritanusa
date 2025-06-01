@@ -3,6 +3,8 @@ import os
 
 HF_TOKEN = os.getenv("HF_TOKEN")
 
+print(HF_TOKEN)
+
 API_URL = "https://router.huggingface.co/hf-inference/models/cahya/t5-base-indonesian-summarization-cased"
 HEADERS = {
     "Authorization": "Bearer {HF_TOKEN}"  
