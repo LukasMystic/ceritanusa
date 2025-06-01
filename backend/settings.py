@@ -18,6 +18,9 @@ import os
 MONGO_DB_NAME = os.getenv("MONGO_DB_NAME")
 MONGO_URI = os.getenv("MONGO_URI")
 
+print("MONGO_URI =", os.getenv("MONGO_URI"))
+print("MONGO_DB_NAME =", os.getenv("MONGO_DB_NAME"))
+
 connect(
     db=MONGO_DB_NAME,
     host=MONGO_URI,
