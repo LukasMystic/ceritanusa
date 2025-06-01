@@ -14,13 +14,22 @@ def load_model_and_tokenizer():
 tokenizer, model = load_model_and_tokenizer()
 
 def summarize_text(text):
-    payload = {"inputs": f"ringkasan: {text}"}
+    payload = {
+        "inputs": f"ringkasan: {text}",
+        "parameters": {
+            "max_length": 80,
+            "min_length": 30,
+            "do_sample": False,
+            "early_stopping": True,
+            "num_beams": 4
+        }
+    }
     response = requests.post(API_URL, headers=HEADERS, json=payload)
 
     if response.status_code == 200:
         json_response = response.json()
         try:
-            return json_response[0]["summary_text"]  # <-- changed here
+            return json_response[0]["summary_text"]
         except (KeyError, IndexError, TypeError):
             return "⚠️ Respons tidak terduga dari model."
     else:
