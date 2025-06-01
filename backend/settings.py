@@ -15,19 +15,13 @@ from mongoengine import connect
 import os
 
 # Connect to MongoDB
-MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "admin123")
-MONGO_URI = os.getenv("MONGO_URI", "mongodb+srv://admin:admin123@ceritanusa.vqj7q.mongodb.net/")
+MONGO_DB_NAME = os.getenv("MONGO_DB_NAME")
+MONGO_URI = os.getenv("MONGO_URI")
 
-# Connect to MongoDB using environment variables
 connect(
     db=MONGO_DB_NAME,
     host=MONGO_URI,
-    alias="default",
-    # other options if needed
 )
-
-
-connect(db=MONGO_DB_NAME, host=MONGO_URI)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
