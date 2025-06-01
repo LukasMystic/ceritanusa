@@ -2,15 +2,15 @@ import requests
 import os
 
 HF_TOKEN = os.getenv("HF_TOKEN")
-
-print(HF_TOKEN)
+print(f"Hugging Face Token loaded: {HF_TOKEN is not None}")
 
 API_URL = "https://router.huggingface.co/hf-inference/models/cahya/t5-base-indonesian-summarization-cased"
 HEADERS = {
-    "Authorization": "Bearer {HF_TOKEN}"  
+    "Authorization": f"Bearer {HF_TOKEN}"
 }
 
 def load_model_and_tokenizer():
+    # Since you are using HF API, no local model/tokenizer loading is needed
     return None, None
 
 tokenizer, model = load_model_and_tokenizer()
@@ -36,5 +36,3 @@ def summarize_text(text):
             return "⚠️ Respons tidak terduga dari model."
     else:
         return f"⚠️ API Error {response.status_code}: {response.text}"
-
-
