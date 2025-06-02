@@ -1,4 +1,4 @@
-from mongoengine import Document, StringField, DateTimeField, FileField, ListField, EmbeddedDocument, fields
+from mongoengine import Document, StringField, DateTimeField, FileField, ListField, EmbeddedDocument, fields, ReferenceField
 from datetime import datetime
 from django.db import models
 
@@ -46,5 +46,6 @@ class Favorite(Document):
 class Summary(Document):
     original_text = StringField(required=True)
     summarized_text = StringField()
+    article_id = ReferenceField('Artikel', required=True)
     created_at = DateTimeField(default=datetime.utcnow)
     updated_at = DateTimeField(default=datetime.utcnow)
