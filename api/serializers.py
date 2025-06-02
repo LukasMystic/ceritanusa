@@ -155,25 +155,43 @@ class SummarySerializer(serializers.Serializer):
     id = serializers.CharField(read_only=True)
     original_text = serializers.CharField()
     summarized_text = serializers.CharField(read_only=True)
+    article_id = serializers.CharField()  # <-- add this line
     created_at = serializers.DateTimeField(read_only=True)
     updated_at = serializers.DateTimeField(read_only=True)
 
     def create(self, validated_data):
-        from .summarizer import summarize_text  # import the summarizer function
+        from .summarizer import summarize_text
 
         text = validated_data['original_text']
-        summary = summarize_text(text)
+        summary_text = summarize_text(text)
+        artikel_id = validated_data['article_id']
+        artikel = Artikel.objects.get(id=artikel_id)
 
         summary_instance = Summary(
             original_text=text,
-            summarized_text=summary
+            summarized_text=summary_text,
+            article_id=artikel
         )
         summary_instance.save()
         return summary_instance
 
     def update(self, instance, validated_data):
-        # Allow updating the summarized_text manually
         instance.summarized_text = validated_data.get('summarized_text', instance.summarized_text)
         instance.updated_at = datetime.utcnow()
+
+        artikel_id = validated_data.get('article_id')
+        if artikel_id:
+            instance.article_id = Artikel.objects.get(id=artikel_id)
+
         instance.save()
         return instance
+
+    def to_representation(self, instance):
+        return {
+            "id": str(instance.id),
+            "original_text": instance.original_text,
+            "summarized_text": instance.summarized_text,
+            "article_id": str(instance.article_id.id) if instance.article_id else None,
+            "created_at": instance.created_at,
+            "updated_at": instance.updated_at
+        }
