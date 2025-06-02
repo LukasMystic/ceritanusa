@@ -241,3 +241,13 @@ class SummaryDetailView(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Summary.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
+
+class SummaryByArticleView(APIView):
+    def get(self, request, article_id):
+        try:
+            summary = Summary.objects.get(article_id=article_id)
+        except Summary.DoesNotExist:
+            return Response({'error': 'Summary not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = SummarySerializer(summary)
+        return Response(serializer.data)
