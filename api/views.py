@@ -8,6 +8,8 @@ from rest_framework import viewsets
 from .summarizer import summarize_text
 from django.http import FileResponse
 from mongoengine.queryset.visitor import Q
+from collections import defaultdict
+import re
 
 # Articles
 class ArtikelListCreateView(APIView):
@@ -53,8 +55,15 @@ class ArtikelDetailView(APIView):
         artikel = self.get_object(pk)
         if not artikel:
             return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Cascade delete favorites and summaries
+        Favorite.objects(article_id=artikel).delete()
+        Summary.objects(article_id=artikel).delete()
+
         artikel.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    
 class ArtikelImageView(APIView):
     def get(self, request, pk):
         try:
@@ -130,6 +139,50 @@ class ChatOverviewView(APIView):
         serializer = ChatOverviewSerializer(results, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 # QUiz
+# views.py (updated restructure_nested_formdata)
+
+def restructure_nested_formdata(data, files):
+    combined = defaultdict(dict)
+
+    # Step 1: parse regular fields
+    for key, value in data.items():
+        if match := re.match(r'^questions\[(\d+)\]\[(\w+)\]$', key):
+            idx, field = match.groups()
+            combined[int(idx)][field] = value
+        elif match := re.match(r'^questions\[(\d+)\]\[choices\]\[(\d+)\]\[(\w+)\]$', key):
+            q_idx, c_idx, field = match.groups()
+            if 'choices' not in combined[int(q_idx)]:
+                combined[int(q_idx)]['choices'] = defaultdict(dict)
+            combined[int(q_idx)]['choices'][int(c_idx)][field] = value
+
+    # Step 2: parse files (important!)
+    for key in files:
+        if match := re.match(r'^questions\[(\d+)\]\[(\w+)\]$', key):
+            idx, field = match.groups()
+            combined[int(idx)][field] = files.get(key)
+
+    # Step 3: finalize structure
+    questions = []
+    for idx in sorted(combined.keys()):
+        q_data = combined[idx]
+        if 'choices' in q_data:
+            q_data['choices'] = [
+                q_data['choices'][c_idx]
+                for c_idx in sorted(q_data['choices'].keys())
+            ]
+        questions.append(q_data)
+
+    structured = {
+        'title': data.get('title'),
+        'description': data.get('description'),
+        'questions': questions if questions else None
+    }
+
+    print("✅ restructure_nested_formdata OUTPUT:", structured)
+    return structured
+
+
+
 class QuizListCreateView(APIView):
     def get(self, request):
         quizzes = Quiz.objects()
@@ -137,11 +190,13 @@ class QuizListCreateView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        serializer = QuizSerializer(data=request.data)
+        parsed_data = restructure_nested_formdata(request.data, request.FILES)
+        serializer = QuizSerializer(data=parsed_data)
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            quiz = serializer.save()
+            return Response(QuizSerializer(quiz).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class QuizDetailView(APIView):
     def get_object(self, pk):
@@ -161,10 +216,12 @@ class QuizDetailView(APIView):
         quiz = self.get_object(pk)
         if not quiz:
             return Response({"error": "Quiz not found"}, status=status.HTTP_404_NOT_FOUND)
-        serializer = QuizSerializer(quiz, data=request.data)
+
+        parsed_data = restructure_nested_formdata(request.data, request.FILES)
+        serializer = QuizSerializer(quiz, data=parsed_data)
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
+            quiz = serializer.save()
+            return Response(QuizSerializer(quiz).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
@@ -173,7 +230,19 @@ class QuizDetailView(APIView):
             return Response({"error": "Quiz not found"}, status=status.HTTP_404_NOT_FOUND)
         quiz.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-    
+
+
+class QuizQuestionImageView(APIView):
+    def get(self, request, quiz_id, question_index):
+        try:
+            quiz = Quiz.objects.get(id=quiz_id)
+            question = quiz.questions[int(question_index)]
+            if not question.image:
+                return Response({'error': 'No image found'}, status=404)
+            return FileResponse(question.image, content_type='image/jpeg')
+        except (Quiz.DoesNotExist, IndexError, ValueError):
+            return Response({'error': 'Not found'}, status=404)
+
 # Favourite
 class FavoriteListCreateView(APIView):
     def post(self, request):
