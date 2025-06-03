@@ -3,6 +3,13 @@ from .models import ChatMessage
 from .models import Artikel, Quiz, Question, Choice, Favorite, Summary
 from datetime import datetime
 from .summarizer import summarize_text
+from mongoengine import fields
+from gridfs import GridFS
+from django.core.files.uploadedfile import InMemoryUploadedFile
+
+import mongoengine.connection
+fs = GridFS(mongoengine.connection.get_db())
+
 
 class ArtikelSerializer(serializers.Serializer):
     id = serializers.CharField(read_only=True)
@@ -99,12 +106,30 @@ class QuizSerializer(serializers.Serializer):
     def create(self, validated_data):
         questions_data = validated_data.pop('questions')
         questions = []
+
         for q in questions_data:
+            image_file = q.get('image', None)
             choices = [Choice(**c) for c in q['choices']]
-            questions.append(Question(text=q['text'], image=q.get('image'), choices=choices))
-        quiz = Quiz(**validated_data, questions=questions)
+
+            # Create the Question object first (so it has an ImageField instance)
+            question = Question(text=q['text'], choices=choices)
+
+            if isinstance(image_file, InMemoryUploadedFile):
+                # Make sure to use .put() on the actual image field
+                question.image.put(
+                    image_file,
+                    content_type=image_file.content_type,
+                    filename=image_file.name
+                )
+
+            questions.append(question)
+
+        quiz = Quiz(title=validated_data['title'],
+                    description=validated_data.get('description', ''),
+                    questions=questions)
         quiz.save()
         return quiz
+
 
     def update(self, instance, validated_data):
         instance.title = validated_data.get('title', instance.title)
@@ -112,14 +137,49 @@ class QuizSerializer(serializers.Serializer):
 
         questions_data = validated_data.get('questions')
         if questions_data:
-            questions = []
-            for q in questions_data:
+            updated_questions = []
+
+            for idx, q in enumerate(questions_data):
                 choices = [Choice(**c) for c in q['choices']]
-                questions.append(Question(text=q['text'], image=q.get('image'), choices=choices))
-            instance.questions = questions
+                question = Question(text=q['text'], choices=choices)
+
+                image_file = q.get('image', None)
+                if isinstance(image_file, InMemoryUploadedFile):
+                    question.image.put(
+                        image_file,
+                        content_type=image_file.content_type,
+                        filename=image_file.name
+                    )
+                elif idx < len(instance.questions) and instance.questions[idx].image:
+                    # Reuse old image if not replaced
+                    question.image = instance.questions[idx].image
+
+                updated_questions.append(question)
+
+            instance.questions = updated_questions
 
         instance.save()
         return instance
+    
+    def to_representation(self, instance):
+        data = {
+            'id': str(instance.id),
+            'title': instance.title,
+            'description': instance.description,
+            'created_at': instance.created_at,
+            'questions': []
+        }
+
+        for i, q in enumerate(instance.questions):
+            q_data = {
+                'text': q.text,
+                'image': f'/api/quizzes/{str(instance.id)}/questions/{i}/image/' if q.image else None,
+                'choices': [{'text': c.text, 'is_correct': c.is_correct} for c in q.choices]
+            }
+            data['questions'].append(q_data)
+
+        return data
+
     
 class FavoriteSerializer(serializers.Serializer):
     id = serializers.CharField(read_only=True)
