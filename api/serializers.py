@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import ChatMessage
 from .models import Artikel, Quiz, Question, Choice, Favorite, Summary
 from datetime import datetime
+from .summarizer import summarize_text
 
 class ArtikelSerializer(serializers.Serializer):
     id = serializers.CharField(read_only=True)
@@ -154,35 +155,38 @@ class FavoriteSerializer(serializers.Serializer):
 class SummarySerializer(serializers.Serializer):
     id = serializers.CharField(read_only=True)
     original_text = serializers.CharField()
-    summarized_text = serializers.CharField(read_only=True)
-    article_id = serializers.CharField()  # <-- add this line
+    summarized_text = serializers.CharField(required=False)  
+    article_id = serializers.CharField()
     created_at = serializers.DateTimeField(read_only=True)
     updated_at = serializers.DateTimeField(read_only=True)
 
     def create(self, validated_data):
-        from .summarizer import summarize_text
-
         text = validated_data['original_text']
-        summary_text = summarize_text(text)
-        artikel_id = validated_data['article_id']
-        artikel = Artikel.objects.get(id=artikel_id)
+        article_id = validated_data['article_id']
+        article = Artikel.objects.get(id=article_id)
+
+        summary_text = validated_data.get('summarized_text') or summarize_text(text)
 
         summary_instance = Summary(
             original_text=text,
             summarized_text=summary_text,
-            article_id=artikel
+            article_id=article
         )
         summary_instance.save()
         return summary_instance
 
     def update(self, instance, validated_data):
-        instance.summarized_text = validated_data.get('summarized_text', instance.summarized_text)
+        instance.original_text = validated_data.get('original_text', instance.original_text)
+
+        if 'summarized_text' in validated_data:
+            instance.summarized_text = validated_data['summarized_text']
+        elif 'original_text' in validated_data:
+            instance.summarized_text = summarize_text(instance.original_text)
+
+        if 'article_id' in validated_data:
+            instance.article_id = Artikel.objects.get(id=validated_data['article_id'])
+
         instance.updated_at = datetime.utcnow()
-
-        artikel_id = validated_data.get('article_id')
-        if artikel_id:
-            instance.article_id = Artikel.objects.get(id=artikel_id)
-
         instance.save()
         return instance
 
@@ -193,5 +197,5 @@ class SummarySerializer(serializers.Serializer):
             "summarized_text": instance.summarized_text,
             "article_id": str(instance.article_id.id) if instance.article_id else None,
             "created_at": instance.created_at,
-            "updated_at": instance.updated_at
+            "updated_at": instance.updated_at,
         }
