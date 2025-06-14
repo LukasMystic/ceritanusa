@@ -34,7 +34,9 @@ class Quiz(Document):
     title = fields.StringField(required=True)
     description = fields.StringField()
     questions = fields.EmbeddedDocumentListField(Question)
+    author_id = fields.StringField(required=False, null=True)
     created_at = fields.DateTimeField(default=datetime.utcnow)
+    
 
     meta = {'collection': 'quiz'}
 
