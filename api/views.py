@@ -56,7 +56,6 @@ class ArtikelDetailView(APIView):
         if not artikel:
             return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Cascade delete favorites and summaries
         Favorite.objects(article_id=artikel).delete()
         Summary.objects(article_id=artikel).delete()
 
@@ -70,8 +69,7 @@ class ArtikelImageView(APIView):
             artikel = Artikel.objects.get(id=pk)
             if not artikel.image:
                 return Response({'error': 'No image found'}, status=404)
-            # Serve file directly from GridFS
-            return FileResponse(artikel.image, content_type='image/jpeg')  # or the actual content type
+            return FileResponse(artikel.image, content_type='image/jpeg') 
         except Artikel.DoesNotExist:
             return Response({'error': 'Not found'}, status=404)
 # Chatting
@@ -120,7 +118,6 @@ class ChatMessageDetail(APIView):
 
 class ChatOverviewView(APIView):
     def get(self, request, uid):
-        # Combine filters with Q and OR
         messages = ChatMessage.objects.filter(Q(sender=uid) | Q(receiver=uid)).order_by('timestamp')
 
         results = []
@@ -144,7 +141,6 @@ class ChatOverviewView(APIView):
 def restructure_nested_formdata(data, files):
     combined = defaultdict(dict)
 
-    # Step 1: parse regular fields
     for key, value in data.items():
         if match := re.match(r'^questions\[(\d+)\]\[(\w+)\]$', key):
             idx, field = match.groups()
@@ -155,13 +151,13 @@ def restructure_nested_formdata(data, files):
                 combined[int(q_idx)]['choices'] = defaultdict(dict)
             combined[int(q_idx)]['choices'][int(c_idx)][field] = value
 
-    # Step 2: parse files (important!)
+
     for key in files:
         if match := re.match(r'^questions\[(\d+)\]\[(\w+)\]$', key):
             idx, field = match.groups()
             combined[int(idx)][field] = files.get(key)
 
-    # Step 3: finalize structure
+
     questions = []
     for idx in sorted(combined.keys()):
         q_data = combined[idx]
@@ -172,14 +168,16 @@ def restructure_nested_formdata(data, files):
             ]
         questions.append(q_data)
 
+  
     structured = {
         'title': data.get('title'),
         'description': data.get('description'),
+        'author_id': data.get('author_id'), 
         'questions': questions if questions else None
     }
 
-    print("✅ restructure_nested_formdata OUTPUT:", structured)
     return structured
+
 
 
 
@@ -243,6 +241,14 @@ class QuizQuestionImageView(APIView):
         except (Quiz.DoesNotExist, IndexError, ValueError):
             return Response({'error': 'Not found'}, status=404)
 
+class QuizListByAuthorView(APIView):
+    def get(self, request, author_id):
+        quizzes = Quiz.objects(author_id=author_id)
+        serializer = QuizSerializer(quizzes, many=True)
+        return Response(serializer.data)
+
+
+
 # Favourite
 class FavoriteListCreateView(APIView):
     def post(self, request):
@@ -268,8 +274,6 @@ class FavoriteDeleteView(APIView):
             return Response(status=status.HTTP_404_NOT_FOUND)
     
 # Summarizer
-
-
 class SummaryListCreateView(APIView):
     def get(self, request):
         summaries = Summary.objects()
