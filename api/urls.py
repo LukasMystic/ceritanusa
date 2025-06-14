@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import ArtikelListCreateView, ArtikelDetailView, ChatMessageList, ChatMessageDetail, QuizDetailView, QuizListCreateView,  FavoriteListCreateView, FavoriteDeleteView, FavoriteListByUserView, SummaryListCreateView, SummaryDetailView, ArtikelImageView, ChatOverviewView, SummaryByArticleView, QuizQuestionImageView
+from .views import ArtikelListCreateView, ArtikelDetailView, ChatMessageList, ChatMessageDetail, QuizDetailView, QuizListCreateView,  FavoriteListCreateView, FavoriteDeleteView, FavoriteListByUserView, SummaryListCreateView, SummaryDetailView, ArtikelImageView, ChatOverviewView, SummaryByArticleView, QuizQuestionImageView, QuizListByAuthorView
 
 urlpatterns = [
     path('artikels/', ArtikelListCreateView.as_view(), name='artikel-list'),
@@ -11,6 +11,7 @@ urlpatterns = [
     path('quizzes/', QuizListCreateView.as_view(), name='quiz-list'),
     path('quizzes/<str:pk>/', QuizDetailView.as_view(), name='quiz-detail'),
     path('quizzes/<str:quiz_id>/questions/<int:question_index>/image/', QuizQuestionImageView.as_view()),
+    path('quizzes/by-author/<str:author_id>/', QuizListByAuthorView.as_view(), name='quiz-by-author'),  
     path('favorites/', FavoriteListCreateView.as_view()), 
     path('favorites/<str:user_id>/', FavoriteListByUserView.as_view()),  
     path('favorites/delete/<str:pk>/', FavoriteDeleteView.as_view()), 
