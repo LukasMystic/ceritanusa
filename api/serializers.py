@@ -101,6 +101,7 @@ class QuizSerializer(serializers.Serializer):
     title = serializers.CharField()
     description = serializers.CharField()
     questions = QuestionSerializer(many=True)
+    author_id = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     created_at = serializers.DateTimeField(read_only=True)
 
     def create(self, validated_data):
@@ -110,12 +111,9 @@ class QuizSerializer(serializers.Serializer):
         for q in questions_data:
             image_file = q.get('image', None)
             choices = [Choice(**c) for c in q['choices']]
-
-            # Create the Question object first (so it has an ImageField instance)
             question = Question(text=q['text'], choices=choices)
 
             if isinstance(image_file, InMemoryUploadedFile):
-                # Make sure to use .put() on the actual image field
                 question.image.put(
                     image_file,
                     content_type=image_file.content_type,
@@ -124,16 +122,19 @@ class QuizSerializer(serializers.Serializer):
 
             questions.append(question)
 
-        quiz = Quiz(title=validated_data['title'],
-                    description=validated_data.get('description', ''),
-                    questions=questions)
+        quiz = Quiz(
+            title=validated_data['title'],
+            description=validated_data.get('description', ''),
+            questions=questions,
+            author_id=validated_data.get('author_id')  # support optional author_id
+        )
         quiz.save()
         return quiz
-
 
     def update(self, instance, validated_data):
         instance.title = validated_data.get('title', instance.title)
         instance.description = validated_data.get('description', instance.description)
+        instance.author_id = validated_data.get('author_id', instance.author_id)
 
         questions_data = validated_data.get('questions')
         if questions_data:
@@ -151,7 +152,6 @@ class QuizSerializer(serializers.Serializer):
                         filename=image_file.name
                     )
                 elif idx < len(instance.questions) and instance.questions[idx].image:
-                    # Reuse old image if not replaced
                     question.image = instance.questions[idx].image
 
                 updated_questions.append(question)
@@ -160,12 +160,13 @@ class QuizSerializer(serializers.Serializer):
 
         instance.save()
         return instance
-    
+
     def to_representation(self, instance):
         data = {
             'id': str(instance.id),
             'title': instance.title,
             'description': instance.description,
+            'author_id': instance.author_id,
             'created_at': instance.created_at,
             'questions': []
         }
@@ -179,6 +180,7 @@ class QuizSerializer(serializers.Serializer):
             data['questions'].append(q_data)
 
         return data
+
 
     
 class FavoriteSerializer(serializers.Serializer):
